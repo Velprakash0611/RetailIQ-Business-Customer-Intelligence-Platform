@@ -43,8 +43,8 @@ def build_rfm_persona_figure(segment_summary_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=320,
         margin=dict(l=140, r=20, t=10, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Customer Count", showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="", tickfont=dict(size=11)),
     )
@@ -100,8 +100,8 @@ def build_cohort_heatmap_figure(sales_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=320,
         margin=dict(l=60, r=20, t=10, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Months Since First Acquisition", tickfont=dict(size=11)),
         yaxis=dict(title="Acquisition Cohort", tickfont=dict(size=11), autorange="reversed"),
     )
@@ -112,7 +112,7 @@ def build_recency_hist_figure(features_df: pd.DataFrame) -> go.Figure:
     """Builds recency days distribution histogram."""
     if features_df is None or features_df.empty:
         fig = go.Figure()
-        fig.update_layout(template="plotly_white", height=240)
+        fig.update_layout(template="plotly_white", height=240, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         return fig
 
     fig = go.Figure()
@@ -128,8 +128,8 @@ def build_recency_hist_figure(features_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=240,
         margin=dict(l=35, r=15, t=10, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Days Since Last Purchase", showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="Customers", showgrid=True, gridcolor="#E2E8F0"),
     )

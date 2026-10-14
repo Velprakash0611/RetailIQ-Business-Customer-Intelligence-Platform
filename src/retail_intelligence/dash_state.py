@@ -25,8 +25,8 @@ SAVED_MODEL_PATH = "models/inactivity_model_latest.pkl"
 class DashStateController:
     """Singleton-style controller for Dash runtime data."""
 
-    def __init__(self):
-        self.filename: str = "online_retail_sample.csv (Benchmark)"
+    def __init__(self, auto_load_benchmark: bool = False):
+        self.filename: Optional[str] = None
         self.raw_df: Optional[pd.DataFrame] = None
         self.mapping: Dict[str, str] = {}
         self.clean_sales_df: Optional[pd.DataFrame] = None
@@ -41,8 +41,8 @@ class DashStateController:
         self.value_cutoff_pct: float = 70.0
         self.risk_weight: float = 0.60
 
-        # Auto-initialize with benchmark
-        self.load_benchmark()
+        if auto_load_benchmark:
+            self.load_benchmark()
 
     def load_benchmark(self):
         """Loads benchmark dataset and pre-computes pipeline."""

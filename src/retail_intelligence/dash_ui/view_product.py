@@ -52,8 +52,8 @@ def build_top_products_figure(sales_df: pd.DataFrame, top_n: int = 10, by: str =
         template="plotly_white",
         height=320,
         margin=dict(l=150, r=30, t=10, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title=title_text, showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="", tickfont=dict(size=11)),
     )
@@ -93,7 +93,8 @@ def build_country_figure(country_df: pd.DataFrame) -> go.Figure:
         template="plotly_white",
         height=280,
         margin=dict(l=20, r=20, t=10, b=10),
-        paper_bgcolor="#FFFFFF",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
     )
     return fig

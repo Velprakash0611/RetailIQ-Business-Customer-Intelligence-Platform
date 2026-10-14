@@ -54,7 +54,6 @@ def build_ingestion_view() -> html.Div:
                                         "borderRadius": "8px",
                                         "padding": "32px 16px",
                                         "textAlign": "center",
-                                        "backgroundColor": "#F8FAFC",
                                         "cursor": "pointer",
                                     },
                                     children=[

@@ -49,8 +49,8 @@ def build_calibration_curve_figure(calib_data: dict[str, list[float]]) -> go.Fig
         template="plotly_white",
         height=280,
         margin=dict(l=45, r=20, t=15, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Mean Predicted Inactivity Probability", range=[0, 1], showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="Observed Positive Fraction", range=[0, 1], showgrid=True, gridcolor="#E2E8F0"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -90,8 +90,8 @@ def build_pr_curve_figure(pr_data: dict[str, list[float]], baseline: float = 0.5
         template="plotly_white",
         height=280,
         margin=dict(l=45, r=20, t=15, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Recall", range=[0, 1], showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="Precision", range=[0, 1.05], showgrid=True, gridcolor="#E2E8F0"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -103,7 +103,7 @@ def build_feature_importance_figure(importances: dict[str, float]) -> go.Figure:
     """Builds horizontal bar chart for top predictive feature weights."""
     if not importances:
         fig = go.Figure()
-        fig.update_layout(template="plotly_white", height=280)
+        fig.update_layout(template="plotly_white", height=280, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         return fig
 
     # Sort descending and take top 8
@@ -128,8 +128,8 @@ def build_feature_importance_figure(importances: dict[str, float]) -> go.Figure:
         template="plotly_white",
         height=280,
         margin=dict(l=180, r=20, t=10, b=35),
-        plot_bgcolor="#F8FAFC",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(title="Relative Importance Weight", showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="", tickfont=dict(size=11)),
     )
