@@ -88,14 +88,20 @@ gantt
 A prediction alone is not enough to guide business action. RetailIQ blends predicted inactivity risk with customer monetary spend into an actionable intervention queue:
 
 ```mermaid
-quadrantChart
-    title Customer Value vs. Inactivity Risk Matrix
-    x-axis Low Inactivity Risk --> High Inactivity Risk
-    y-axis Lower Customer Value --> High Customer Value
-    quadrant-1 High Risk, High Value (VIP At-Risk)
-    quadrant-2 Low Risk, High Value (VIP Loyals)
-    quadrant-3 Low Risk, Lower Value (Routine Shoppers)
-    quadrant-4 High Risk, Lower Value (Churning Base)
+flowchart TD
+    subgraph MATRIX["Customer Value vs. Inactivity Risk Matrix"]
+        direction TB
+        subgraph TOP_ROW["High Customer Value (Top 30% Spend)"]
+            direction LR
+            Q2["<b>Quadrant 2: VIP Loyals</b><br/>Low Inactivity Risk | High Spend<br/><i>Action: Loyalty rewards & perks</i>"]
+            Q1["<b>Quadrant 1: VIP At-Risk</b><br/>High Inactivity Risk | High Spend<br/><i>Action: Immediate concierge retention</i>"]
+        end
+        subgraph BOTTOM_ROW["Lower Customer Value (Base 70% Spend)"]
+            direction LR
+            Q3["<b>Quadrant 3: Routine Shoppers</b><br/>Low Inactivity Risk | Lower Spend<br/><i>Action: Routine merchandising</i>"]
+            Q4["<b>Quadrant 4: Churning Base</b><br/>High Inactivity Risk | Lower Spend<br/><i>Action: Automated win-back discounts</i>"]
+        end
+    end
 ```
 
 | Priority Quadrant | Strategic Recommendation | Action Mechanism |
