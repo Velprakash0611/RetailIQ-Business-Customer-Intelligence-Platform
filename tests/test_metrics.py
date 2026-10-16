@@ -51,3 +51,33 @@ def test_compute_top_products():
     top_qty = compute_top_products(sales_df, top_n=2, by="quantity")
     assert top_qty.iloc[0]["product_id"] == "P2"
     assert top_qty.iloc[0]["quantity"] == 20
+
+
+def test_compute_sales_trends_frequencies():
+    from retail_intelligence.metrics import compute_sales_trends
+    sales_df = pd.DataFrame({
+        "date": pd.to_datetime(["2023-01-01", "2023-01-15", "2023-02-05"]),
+        "invoice_id": ["I1", "I2", "I3"],
+        "customer_id": ["C1", "C2", "C1"],
+        "quantity": [2, 1, 3],
+        "unit_price": [10.0, 20.0, 10.0],
+        "total_amount": [20.0, 20.0, 30.0],
+    })
+
+    # Test daily
+    trend_d = compute_sales_trends(sales_df, freq="D")
+    assert len(trend_d) == 3
+
+    # Test weekly
+    trend_w = compute_sales_trends(sales_df, freq="W")
+    assert not trend_w.empty
+
+    # Test monthly with "M"
+    trend_m = compute_sales_trends(sales_df, freq="M")
+    assert len(trend_m) == 2
+
+    # Test monthly with "MS" (ensures offset aliases are properly handled)
+    trend_ms = compute_sales_trends(sales_df, freq="MS")
+    assert len(trend_ms) == 2
+    assert trend_ms["revenue"].sum() == 70.0
+

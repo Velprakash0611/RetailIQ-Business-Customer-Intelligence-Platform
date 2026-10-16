@@ -136,3 +136,73 @@ def test_landing_upload_missing_required_column():
     assert "Schema Mismatch" in getattr(badge, "children", "")
     assert "Missing essential fields" in getattr(msg, "children", "")
 
+
+def test_render_tab_content_animated_wrapper():
+    """Verifies render_tab_content wraps output in animated div with dynamic key."""
+    from dash_app import render_tab_content
+    comp = render_tab_content("tab-executive", 1)
+    assert getattr(comp, "className", None) == "tab-view-animated"
+    assert getattr(comp, "key", None) == "tab-executive-1"
+
+
+def test_six_canonical_dashboard_tabs():
+    """Verifies that main-tabs contains exactly 6 canonical tabs including Audit & Governance."""
+    from dash_app import app
+    import dash_mantine_components as dmc
+
+    tabs_component = None
+    for comp in app.layout._traverse():
+        if getattr(comp, "id", None) == "main-tabs":
+            tabs_component = comp
+            break
+
+    assert tabs_component is not None, "main-tabs not found in app layout"
+    # Find dmc.TabsList
+    tabs_list = None
+    for child in tabs_component.children:
+        if isinstance(child, dmc.TabsList):
+            tabs_list = child
+            break
+
+    assert tabs_list is not None, "dmc.TabsList not found inside main-tabs"
+    tab_values = [tab.value for tab in tabs_list.children if hasattr(tab, "value")]
+    assert len(tab_values) == 6
+    assert tab_values == [
+        "tab-executive",
+        "tab-product",
+        "tab-customer",
+        "tab-prediction",
+        "tab-prioritisation",
+        "tab-report",
+    ]
+
+
+def test_all_views_render_valid_components():
+    """Verifies all 6 tab view functions execute and render with graphs and cards."""
+    from retail_intelligence.dash_ui.view_executive import build_executive_view
+    from retail_intelligence.dash_ui.view_product import build_product_view
+    from retail_intelligence.dash_ui.view_customer import build_customer_view
+    from retail_intelligence.dash_ui.view_prediction import build_prediction_view
+    from retail_intelligence.dash_ui.view_prioritisation import build_prioritisation_view
+    from retail_intelligence.dash_ui.view_report import build_report_view
+
+    exec_view = build_executive_view()
+    assert exec_view is not None
+
+    prod_view = build_product_view()
+    assert prod_view is not None
+
+    cust_view = build_customer_view()
+    assert cust_view is not None
+
+    pred_view = build_prediction_view()
+    assert pred_view is not None
+
+    prio_view = build_prioritisation_view()
+    assert prio_view is not None
+
+    rep_view = build_report_view()
+    assert rep_view is not None
+
+
+

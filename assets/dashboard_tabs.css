@@ -1,0 +1,191 @@
+/* ==========================================================================
+   RetailIQ Dashboard - Modern Animated Executive Tab Navigation Bar
+   ========================================================================== */
+
+/* 1. Outer Floating Card Wrapper */
+.tabs-nav-card {
+  border-radius: 18px !important;
+  padding: 6px 8px !important;
+  margin-bottom: 18px !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 10;
+}
+
+[data-mantine-color-scheme="light"] .tabs-nav-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(226, 232, 240, 0.85) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02) !important;
+}
+
+[data-mantine-color-scheme="dark"] .tabs-nav-card {
+  background: rgba(26, 31, 44, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 6px 28px -4px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 2. Responsive Flex Tabs List */
+.modern-tabs-list {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border-bottom: none !important;
+  padding: 2px !important;
+  width: 100% !important;
+}
+
+/* 3. Tab Buttons */
+.modern-tab-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 1 160px !important;
+  min-width: 140px !important;
+  height: 44px !important;
+  padding: 8px 14px !important;
+  border-radius: 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.15px !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+  position: relative !important;
+  outline: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 1200px) {
+  .modern-tab-btn {
+    flex: 1 1 calc(33.333% - 8px) !important;
+    font-size: 13px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .modern-tab-btn {
+    flex: 1 1 calc(50% - 6px) !important;
+    font-size: 12.5px !important;
+    height: 40px !important;
+    padding: 6px 8px !important;
+  }
+}
+
+/* Inactive Tab - Light Scheme */
+[data-mantine-color-scheme="light"] .modern-tab-btn {
+  color: #475569 !important;
+  background-color: transparent !important;
+}
+
+[data-mantine-color-scheme="light"] .modern-tab-btn:hover {
+  color: #1D4ED8 !important;
+  background-color: rgba(37, 99, 235, 0.07) !important;
+  border-color: rgba(37, 99, 235, 0.16) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08) !important;
+}
+
+/* Inactive Tab - Dark Scheme */
+[data-mantine-color-scheme="dark"] .modern-tab-btn {
+  color: #94A3B8 !important;
+  background-color: transparent !important;
+}
+
+[data-mantine-color-scheme="dark"] .modern-tab-btn:hover {
+  color: #60A5FA !important;
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Pressed State */
+.modern-tab-btn:active {
+  transform: scale(0.97) translateY(0) !important;
+}
+
+/* 4. Active Tab High-Tech Pill */
+button.modern-tab-btn[data-active],
+button.modern-tab-btn[data-active="true"],
+button.modern-tab-btn[aria-selected="true"],
+.mantine-Tabs-tab[data-active].modern-tab-btn,
+.mantine-Tabs-tab[aria-selected="true"].modern-tab-btn {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.42), 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-1px) scale(1.01) !important;
+  animation: tabPillSpring 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+[data-mantine-color-scheme="dark"] button.modern-tab-btn[data-active],
+[data-mantine-color-scheme="dark"] button.modern-tab-btn[data-active="true"],
+[data-mantine-color-scheme="dark"] button.modern-tab-btn[aria-selected="true"],
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab[data-active].modern-tab-btn,
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab[aria-selected="true"].modern-tab-btn {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 4px 18px rgba(59, 130, 246, 0.45), 0 0 14px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* 5. Tab Icon Micro-Animations */
+.modern-tab-btn .tab-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 4px !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease !important;
+}
+
+.modern-tab-btn:hover .tab-icon {
+  transform: scale(1.22) rotate(-4deg) !important;
+}
+
+button.modern-tab-btn[data-active] .tab-icon,
+button.modern-tab-btn[data-active="true"] .tab-icon,
+button.modern-tab-btn[aria-selected="true"] .tab-icon,
+.mantine-Tabs-tab[data-active].modern-tab-btn .tab-icon,
+.mantine-Tabs-tab[aria-selected="true"].modern-tab-btn .tab-icon {
+  color: #FFFFFF !important;
+  transform: scale(1.12) !important;
+}
+
+/* 6. Spring Bounce Keyframe for Active Pill */
+@keyframes tabPillSpring {
+  0% {
+    transform: scale(0.95) translateY(0);
+  }
+  50% {
+    transform: scale(1.03) translateY(-2px);
+  }
+  100% {
+    transform: scale(1.01) translateY(-1px);
+  }
+}
+
+/* 7. Tab View Entrance Animation (Fade + Slide Up) */
+@keyframes tabContentEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-view-animated {
+  animation: tabContentEntrance 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+

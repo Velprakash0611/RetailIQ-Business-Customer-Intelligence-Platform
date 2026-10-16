@@ -73,7 +73,7 @@ def compute_executive_kpis(
 
 def compute_sales_trends(
     sales_df: pd.DataFrame,
-    freq: str = "D",  # "D" for daily, "W" for weekly, "MS" for monthly
+    freq: str = "D",  # "D" for daily, "W" for weekly, "M" / "MS" for monthly
 ) -> pd.DataFrame:
     """
     Computes time-series sales, orders, and active customer counts over time.
@@ -82,7 +82,16 @@ def compute_sales_trends(
         return pd.DataFrame(columns=["date", "revenue", "orders", "customers", "aov"])
 
     df = sales_df.copy()
-    df["period"] = df["date"].dt.to_period(freq).dt.to_timestamp()
+    # Normalize offset aliases to valid Period frequencies (e.g. MS/ME -> M, YS/YE -> Y, QS/QE -> Q)
+    period_freq = freq
+    if freq in ("MS", "ME", "M"):
+        period_freq = "M"
+    elif freq in ("YS", "YE", "Y"):
+        period_freq = "Y"
+    elif freq in ("QS", "QE", "Q"):
+        period_freq = "Q"
+
+    df["period"] = df["date"].dt.to_period(period_freq).dt.to_timestamp()
 
     trend = df.groupby("period").agg(
         revenue=("total_amount", "sum"),

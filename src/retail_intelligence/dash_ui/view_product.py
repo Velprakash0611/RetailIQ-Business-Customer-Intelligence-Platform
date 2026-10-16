@@ -184,7 +184,9 @@ def build_product_view() -> html.Div:
                     dcc.Graph(
                         id="product-top-chart",
                         figure=top_fig,
-                        config={"displayModeBar": False, "responsive": True},
+                        config={"displayModeBar": False},
+                        responsive=True,
+                        style={"height": "320px", "width": "100%", "minWidth": 0},
                     ),
                 ],
             ),
@@ -193,6 +195,7 @@ def build_product_view() -> html.Div:
                 cols={"base": 1, "md": 2},
                 spacing="lg",
                 mb="lg",
+                style={"minWidth": 0},
                 children=[
                     # Declining Products Card
                     dmc.Paper(
@@ -200,6 +203,7 @@ def build_product_view() -> html.Div:
                         radius="md",
                         withBorder=True,
                         shadow="xs",
+                        style={"minWidth": 0, "overflow": "hidden"},
                         children=[
                             dmc.Group(
                                 justify="space-between",
@@ -211,11 +215,14 @@ def build_product_view() -> html.Div:
                                 ],
                             ),
                             dmc.Text("Products with highest revenue drop between early and recent halves", size="xs", c="dimmed", mb="md"),
-                            dmc.Table(
-                                data={"head": declining_head, "body": declining_body},
-                                striped=True,
-                                highlightOnHover=True,
-                                withTableBorder=True,
+                            html.Div(
+                                dmc.Table(
+                                    data={"head": declining_head, "body": declining_body},
+                                    striped=True,
+                                    highlightOnHover=True,
+                                    withTableBorder=True,
+                                ),
+                                style={"overflowX": "auto"},
                             ),
                         ],
                     ),
@@ -225,19 +232,25 @@ def build_product_view() -> html.Div:
                         radius="md",
                         withBorder=True,
                         shadow="xs",
+                        style={"minWidth": 0, "overflow": "hidden"},
                         children=[
                             dmc.Title("Geographic Revenue Distribution", order=4, mb="xs"),
                             dmc.Text("Global market contribution and top regional buying centers", size="xs", c="dimmed", mb="sm"),
                             dcc.Graph(
                                 id="product-country-chart",
                                 figure=country_fig,
-                                config={"displayModeBar": False, "responsive": True},
+                                config={"displayModeBar": False},
+                                responsive=True,
+                                style={"height": "280px", "width": "100%", "minWidth": 0},
                             ),
-                            dmc.Table(
-                                data={"head": country_head, "body": country_body},
-                                striped=True,
-                                highlightOnHover=True,
-                                withTableBorder=True,
+                            html.Div(
+                                dmc.Table(
+                                    data={"head": country_head, "body": country_body},
+                                    striped=True,
+                                    highlightOnHover=True,
+                                    withTableBorder=True,
+                                ),
+                                style={"overflowX": "auto"},
                             ),
                         ],
                     ),
@@ -260,11 +273,14 @@ def build_product_view() -> html.Div:
                         ],
                     ),
                     dmc.Text("Items generating the highest refund claims and returned quantities", size="xs", c="dimmed", mb="md"),
-                    dmc.Table(
-                        data={"head": ret_head, "body": returned_items_body},
-                        striped=True,
-                        highlightOnHover=True,
-                        withTableBorder=True,
+                    html.Div(
+                        dmc.Table(
+                            data={"head": ret_head, "body": returned_items_body},
+                            striped=True,
+                            highlightOnHover=True,
+                            withTableBorder=True,
+                        ),
+                        style={"overflowX": "auto"},
                     ),
                 ],
             ),

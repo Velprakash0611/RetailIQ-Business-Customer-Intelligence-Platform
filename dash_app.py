@@ -22,7 +22,6 @@ from retail_intelligence.dash_state import state
 from retail_intelligence.dash_ui.header import build_header
 from retail_intelligence.dash_ui.view_customer import build_customer_view
 from retail_intelligence.dash_ui.view_executive import build_executive_view, build_sales_trend_figure
-from retail_intelligence.dash_ui.view_ingestion import build_ingestion_view
 from retail_intelligence.dash_ui.view_landing import build_landing_dataset_status, build_landing_view
 from retail_intelligence.dash_ui.view_prediction import build_prediction_view
 from retail_intelligence.dash_ui.view_prioritisation import build_prioritisation_view
@@ -178,59 +177,70 @@ app.layout = dmc.MantineProvider(
                             dmc.Stack(
                                 gap="md",
                                 children=[
-                                    dmc.Tabs(
-                                        id="main-tabs",
-                                        value="tab-executive",
-                                        color="blue",
-                                        variant="outline",
-                                        radius="md",
-                                        children=[
-                                            dmc.TabsList(
-                                                children=[
-                                                    dmc.TabsTab(
-                                                        "Executive Overview",
-                                                        value="tab-executive",
-                                                        leftSection=DashIconify(icon="tabler:dashboard", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Data Ingestion & Quality",
-                                                        value="tab-ingestion",
-                                                        leftSection=DashIconify(icon="tabler:database-import", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Product & Geography",
-                                                        value="tab-product",
-                                                        leftSection=DashIconify(icon="tabler:packages", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Customer Intelligence",
-                                                        value="tab-customer",
-                                                        leftSection=DashIconify(icon="tabler:users", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Inactivity Prediction",
-                                                        value="tab-prediction",
-                                                        leftSection=DashIconify(icon="tabler:brain", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Prioritisation Queue",
-                                                        value="tab-prioritisation",
-                                                        leftSection=DashIconify(icon="tabler:list-check", width=18),
-                                                    ),
-                                                    dmc.TabsTab(
-                                                        "Audit & Governance",
-                                                        value="tab-report",
-                                                        leftSection=DashIconify(icon="tabler:file-certificate", width=18),
-                                                    ),
-                                                ],
-                                            ),
-                                        ],
+                                    # Modern Floating Animated Tab Navigation Bar
+                                    dmc.Paper(
+                                        className="tabs-nav-card",
+                                        children=dmc.Tabs(
+                                            id="main-tabs",
+                                            value="tab-executive",
+                                            color="blue",
+                                            variant="pills",
+                                            radius="xl",
+                                            children=[
+                                                dmc.TabsList(
+                                                    grow=True,
+                                                    className="modern-tabs-list",
+                                                    children=[
+                                                        dmc.TabsTab(
+                                                            "Executive Overview & Data Quality",
+                                                            value="tab-executive",
+                                                            leftSection=DashIconify(icon="tabler:dashboard", width=18, className="tab-icon", color="#3B82F6"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                        dmc.TabsTab(
+                                                            "Product & Geography",
+                                                            value="tab-product",
+                                                            leftSection=DashIconify(icon="tabler:packages", width=18, className="tab-icon", color="#8B5CF6"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                        dmc.TabsTab(
+                                                            "Customer Intelligence",
+                                                            value="tab-customer",
+                                                            leftSection=DashIconify(icon="tabler:users", width=18, className="tab-icon", color="#EC4899"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                        dmc.TabsTab(
+                                                            "Inactivity Prediction",
+                                                            value="tab-prediction",
+                                                            leftSection=DashIconify(icon="tabler:brain", width=18, className="tab-icon", color="#F59E0B"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                        dmc.TabsTab(
+                                                            "Prioritisation Queue",
+                                                            value="tab-prioritisation",
+                                                            leftSection=DashIconify(icon="tabler:list-check", width=18, className="tab-icon", color="#10B981"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                        dmc.TabsTab(
+                                                            "Audit & Governance",
+                                                            value="tab-report",
+                                                            leftSection=DashIconify(icon="tabler:file-certificate", width=18, className="tab-icon", color="#6366F1"),
+                                                            className="modern-tab-btn",
+                                                        ),
+                                                    ],
+                                                ),
+                                            ],
+                                        ),
                                     ),
-                                    # Dynamic tab view container
+                                    # Dynamic animated tab view container
                                     html.Div(
                                         id="tab-content",
-                                        style={"marginTop": "10px"},
-                                        children=build_executive_view(),
+                                        style={"marginTop": "6px"},
+                                        children=html.Div(
+                                            build_executive_view(),
+                                            className="tab-view-animated",
+                                            key="initial-executive-view",
+                                        ),
                                     ),
                                 ],
                             ),
@@ -311,22 +321,27 @@ def handle_page_navigation(
     prevent_initial_call=True,
 )
 def render_tab_content(active_tab: str, _trigger: int):
-    """Renders specific analytical view based on currently selected tab."""
-    if active_tab == "tab-executive":
-        return build_executive_view()
-    elif active_tab == "tab-ingestion":
-        return build_ingestion_view()
+    """Renders specific analytical view based on currently selected tab with smooth entrance animation."""
+    if active_tab in ("tab-executive", "tab-ingestion"):
+        view = build_executive_view()
     elif active_tab == "tab-product":
-        return build_product_view()
+        view = build_product_view()
     elif active_tab == "tab-customer":
-        return build_customer_view()
+        view = build_customer_view()
     elif active_tab == "tab-prediction":
-        return build_prediction_view()
+        view = build_prediction_view()
     elif active_tab == "tab-prioritisation":
-        return build_prioritisation_view()
+        view = build_prioritisation_view()
     elif active_tab == "tab-report":
-        return build_report_view()
-    return html.Div("View not found")
+        view = build_report_view()
+    else:
+        view = html.Div("View not found")
+
+    return html.Div(
+        view,
+        className="tab-view-animated",
+        key=f"{active_tab}-{_trigger or 0}",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -433,106 +448,6 @@ def handle_load_benchmark_unified(
 )
 def handle_landing_upload(contents: str, filename: str, current_trigger: int):
     """Parses uploaded CSV/Excel file from the Landing Page dropzone."""
-    if not contents or not filename:
-        empty_status = build_landing_dataset_status(is_loaded=False)
-        return html.Div(), dmc.Badge("No file", color="gray"), empty_status, PROCEED_BTN_HIDDEN, current_trigger
-
-    try:
-        content_type, content_string = contents.split(",")
-        decoded = base64.b64decode(content_string)
-
-        if filename.lower().endswith(".csv"):
-            df = pd.read_csv(io.StringIO(decoded.decode("utf-8", errors="replace")))
-        elif filename.lower().endswith((".xlsx", ".xls")):
-            df = pd.read_excel(io.BytesIO(decoded))
-        else:
-            msg = dmc.Alert(
-                "Unsupported file format. Please upload a standard CSV or Excel file.",
-                color="red",
-                variant="light",
-                radius="sm",
-            )
-            empty_status = build_landing_dataset_status(is_loaded=False)
-            return msg, dmc.Badge("Upload Error", color="red"), empty_status, PROCEED_BTN_HIDDEN, current_trigger
-
-        # Schema detection
-        mapping, _ = detect_column_mappings(list(df.columns))
-        missing_required = [
-            FIELD_LABELS.get(f, f)
-            for f in CANONICAL_REQUIRED_FIELDS
-            if not mapping.get(f)
-        ]
-        if missing_required:
-            msg = dmc.Alert(
-                f"Missing essential fields: {', '.join(missing_required)}. Ensure columns for date, invoice ID, customer ID, product SKU, quantity, and unit price exist.",
-                color="red",
-                variant="light",
-                radius="sm",
-            )
-            empty_status = build_landing_dataset_status(is_loaded=False)
-            return msg, dmc.Badge("Schema Mismatch", color="red"), empty_status, PROCEED_BTN_HIDDEN, current_trigger
-
-        # Update application state
-        state.set_uploaded_dataset(filename, df, mapping)
-        clean_count = len(state.clean_sales_df) if state.clean_sales_df is not None else 0
-        cust_count = int(state.clean_sales_df["customer_id"].nunique()) if state.clean_sales_df is not None else 0
-        net_rev = float(state.cleaning_summary.get("net_revenue", 0.0)) if state.cleaning_summary else 0.0
-        date_min = state.cleaning_summary.get("date_min", "N/A") if state.cleaning_summary else "N/A"
-        date_max = state.cleaning_summary.get("date_max", "N/A") if state.cleaning_summary else "N/A"
-        date_span = f"{date_min} to {date_max}"
-
-        success_msg = dmc.Alert(
-            f"Successfully processed '{filename}': Ingested {len(df):,} raw records, retained {clean_count:,} clean transactions.",
-            color="teal",
-            variant="light",
-            radius="sm",
-        )
-        badge = dmc.Badge(
-            f"Active: {filename} ({clean_count:,} records)",
-            color="blue",
-            variant="light",
-            size="lg",
-            radius="sm",
-        )
-        status_card = build_landing_dataset_status(
-            is_loaded=True,
-            filename=filename,
-            row_count=clean_count,
-            customer_count=cust_count,
-            net_revenue=net_rev,
-            date_span=date_span,
-        )
-
-        return success_msg, badge, status_card, PROCEED_BTN_VISIBLE, (current_trigger or 0) + 1
-
-    except Exception as exc:
-        err_msg = dmc.Alert(
-            f"Error processing upload: {str(exc)}",
-            color="red",
-            variant="light",
-            radius="sm",
-        )
-        empty_status = build_landing_dataset_status(is_loaded=False)
-        return err_msg, dmc.Badge("Error", color="red"), empty_status, PROCEED_BTN_HIDDEN, current_trigger
-
-
-# ---------------------------------------------------------------------------
-# File Upload Ingestion (Dedicated Audit Tab Dropzone Callback)
-# ---------------------------------------------------------------------------
-
-@app.callback(
-    Output("upload-status-message", "children"),
-    Output("header-dataset-badge-container", "children", allow_duplicate=True),
-    Output("landing-dataset-status-container", "children", allow_duplicate=True),
-    Output("btn-proceed-to-dashboard", "style", allow_duplicate=True),
-    Output("state-trigger", "data", allow_duplicate=True),
-    Input("upload-data-file", "contents"),
-    State("upload-data-file", "filename"),
-    State("state-trigger", "data"),
-    prevent_initial_call=True,
-)
-def handle_audit_upload(contents: str, filename: str, current_trigger: int):
-    """Parses uploaded CSV/Excel file from the Audit Tab dropzone."""
     if not contents or not filename:
         empty_status = build_landing_dataset_status(is_loaded=False)
         return html.Div(), dmc.Badge("No file", color="gray"), empty_status, PROCEED_BTN_HIDDEN, current_trigger

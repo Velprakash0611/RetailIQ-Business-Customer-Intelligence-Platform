@@ -103,14 +103,17 @@ def build_report_view() -> html.Div:
                         children=[
                             dmc.Title("1. Data Processing & Quality Scorecard", order=4, mb="xs"),
                             dmc.Text("Verification of raw file filtering, deduplication, and separation of refunds", size="xs", c="dimmed", mb="md"),
-                            dmc.Table(
-                                data={
-                                    "head": ["Audit Item", "Metric Value"],
-                                    "body": scorecard_data,
-                                },
-                                striped=True,
-                                highlightOnHover=True,
-                                withTableBorder=True,
+                            html.Div(
+                                dmc.Table(
+                                    data={
+                                        "head": ["Audit Item", "Metric Value"],
+                                        "body": scorecard_data,
+                                    },
+                                    striped=True,
+                                    highlightOnHover=True,
+                                    withTableBorder=True,
+                                ),
+                                style={"overflowX": "auto"},
                             ),
                         ],
                     ),
