@@ -20,8 +20,9 @@ def build_scatter_matrix_figure(
     df: pd.DataFrame,
     risk_threshold: float,
     val_cutoff: float,
+    selected_group: str | None = None,
 ) -> go.Figure:
-    """Builds 2x2 interactive Risk vs Value scatter matrix with quadrant crosshairs."""
+    """Builds 2x2 interactive Risk vs Value scatter matrix with quadrant crosshairs and PowerBI highlighting."""
     if df is None or df.empty:
         fig = go.Figure()
         fig.update_layout(template="plotly_white", height=380)
@@ -38,18 +39,27 @@ def build_scatter_matrix_figure(
 
     for group_name, group_df in df.groupby("priority_group"):
         c = color_map.get(group_name, "#64748B")
+        if selected_group:
+            opacity = 0.95 if group_name == selected_group else 0.18
+            size = 8 if group_name == selected_group else 5
+        else:
+            opacity = 0.82
+            size = 7
+
         fig.add_trace(
             go.Scatter(
                 x=group_df["inactivity_prob_90d"] * 100.0,
                 y=group_df["total_spend"],
                 mode="markers",
                 name=group_name,
-                marker=dict(size=7, color=c, opacity=0.82),
+                marker=dict(size=size, color=c, opacity=opacity),
                 hovertemplate=(
-                    "<b>Customer %{customdata[0]}</b><br>"
+                    f"<b>{group_name}</b><br>"
+                    "Customer %{customdata[0]}<br>"
                     "Inactivity Risk: %{x:.1f}%<br>"
                     "Lifetime Spend: $%{y:,.2f}<br>"
-                    "Orders: %{customdata[1]} | Recency: %{customdata[2]}d<extra></extra>"
+                    "Orders: %{customdata[1]} | Recency: %{customdata[2]}d<br>"
+                    "<i>Click point/group to filter table</i><extra></extra>"
                 ),
                 customdata=group_df[["customer_id", "frequency", "recency_days"]].values,
             )
@@ -79,22 +89,17 @@ def build_scatter_matrix_figure(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         xaxis=dict(title="Predicted Inactivity Probability (%)", range=[0, 102], showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="Customer Lifetime Spend ($)", showgrid=True, gridcolor="#E2E8F0"),
+        clickmode="event+select",
     )
     return fig
 
 
-def build_prioritisation_view() -> html.Div:
-    """Renders the 4-quadrant prioritisation matrix and actionable customer list."""
-    prioritised_df = state.prioritised_df if state.prioritised_df is not None else pd.DataFrame()
+def build_prioritisation_quadrant_cards(
+    prioritised_df: pd.DataFrame,
+    selected_group: str | None = None,
+) -> dmc.SimpleGrid:
+    """Builds the 4 quadrant KPI cards with active selection styling."""
     summary_df = compute_prioritisation_summary(prioritised_df)
-
-    risk_thresh = state.risk_threshold
-    val_cutoff_pct = state.value_cutoff_pct
-    val_cutoff_amount = float(prioritised_df["total_spend"].quantile(val_cutoff_pct / 100.0)) if not prioritised_df.empty else 500.0
-
-    scatter_fig = build_scatter_matrix_figure(prioritised_df, risk_thresh, val_cutoff_amount)
-
-    # Extract quadrant counts
     quad_stats = {}
     if not summary_df.empty:
         for _, r in summary_df.iterrows():
@@ -109,11 +114,119 @@ def build_prioritisation_view() -> html.Div:
     vip_loyals = quad_stats.get("Low Risk, High Value", {"count": 0, "spend": 0.0, "action": "Focus on loyalty and repeat purchases."})
     routine = quad_stats.get("Low Risk, Lower Value", {"count": 0, "spend": 0.0, "action": "Continue routine monitoring."})
 
-    # Prepare top 10 queue table rows
+    def card_border(group_name: str, base_color: str):
+        if selected_group and selected_group == group_name:
+            return f"4px solid {base_color}"
+        elif selected_group:
+            return "4px solid #E2E8F0"
+        return f"4px solid {base_color}"
+
+    return dmc.SimpleGrid(
+        cols={"base": 1, "sm": 2, "md": 4},
+        spacing="md",
+        children=[
+            # Quadrant 1: VIP At-Risk
+            dmc.Paper(
+                p="md",
+                radius="md",
+                withBorder=True,
+                shadow="xs",
+                style={"borderLeft": card_border("High Risk, High Value", "#EF4444")},
+                children=[
+                    dmc.Group(
+                        justify="space-between",
+                        align="center",
+                        mb="xs",
+                        children=[
+                            dmc.Text("VIP At-Risk", size="xs", fw=700, c="red"),
+                            dmc.Badge("Urgency 1", color="red", variant="light", size="sm", radius="sm"),
+                        ],
+                    ),
+                    dmc.Title(f"{vip_at_risk['count']:,} customers", order=4),
+                    dmc.Text(f"${vip_at_risk['spend']:,.2f} revenue at risk", size="xs", c="dimmed", mt=2),
+                    dmc.Text(vip_at_risk["action"], size="xs", fw=500, mt=6),
+                ],
+            ),
+            # Quadrant 2: Churning Base
+            dmc.Paper(
+                p="md",
+                radius="md",
+                withBorder=True,
+                shadow="xs",
+                style={"borderLeft": card_border("High Risk, Lower Value", "#F97316")},
+                children=[
+                    dmc.Group(
+                        justify="space-between",
+                        align="center",
+                        mb="xs",
+                        children=[
+                            dmc.Text("Churning Base", size="xs", fw=700, c="orange"),
+                            dmc.Badge("Urgency 2", color="orange", variant="light", size="sm", radius="sm"),
+                        ],
+                    ),
+                    dmc.Title(f"{churn_base['count']:,} customers", order=4),
+                    dmc.Text(f"${churn_base['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
+                    dmc.Text(churn_base["action"], size="xs", fw=500, mt=6),
+                ],
+            ),
+            # Quadrant 3: VIP Loyals
+            dmc.Paper(
+                p="md",
+                radius="md",
+                withBorder=True,
+                shadow="xs",
+                style={"borderLeft": card_border("Low Risk, High Value", "#10B981")},
+                children=[
+                    dmc.Group(
+                        justify="space-between",
+                        align="center",
+                        mb="xs",
+                        children=[
+                            dmc.Text("VIP Loyals", size="xs", fw=700, c="teal"),
+                            dmc.Badge("Urgency 3", color="teal", variant="light", size="sm", radius="sm"),
+                        ],
+                    ),
+                    dmc.Title(f"{vip_loyals['count']:,} customers", order=4),
+                    dmc.Text(f"${vip_loyals['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
+                    dmc.Text(vip_loyals["action"], size="xs", fw=500, mt=6),
+                ],
+            ),
+            # Quadrant 4: Routine Shoppers
+            dmc.Paper(
+                p="md",
+                radius="md",
+                withBorder=True,
+                shadow="xs",
+                style={"borderLeft": card_border("Low Risk, Lower Value", "#94A3B8")},
+                children=[
+                    dmc.Group(
+                        justify="space-between",
+                        align="center",
+                        mb="xs",
+                        children=[
+                            dmc.Text("Routine Shoppers", size="xs", fw=700, c="dimmed"),
+                            dmc.Badge("Urgency 4", color="gray", variant="light", size="sm", radius="sm"),
+                        ],
+                    ),
+                    dmc.Title(f"{routine['count']:,} customers", order=4),
+                    dmc.Text(f"${routine['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
+                    dmc.Text(routine["action"], size="xs", fw=500, mt=6),
+                ],
+            ),
+        ],
+    )
+
+
+def build_prioritisation_queue_table(prioritised_df: pd.DataFrame, selected_group: str | None = None) -> html.Div:
+    """Builds top priority contact queue table, optionally filtered by quadrant."""
+    df_source = prioritised_df
+    if selected_group and not prioritised_df.empty and "priority_group" in prioritised_df.columns:
+        df_source = prioritised_df[prioritised_df["priority_group"] == selected_group]
+
     table_head = ["Rank", "Customer ID", "Priority Score", "Quadrant", "Risk Prob", "Spend ($)", "Orders", "Recency"]
     table_body = []
-    top_queue = prioritised_df.head(10) if not prioritised_df.empty else pd.DataFrame()
-    for idx, row in top_queue.iterrows():
+    top_queue = df_source.head(10) if not df_source.empty else pd.DataFrame()
+    for idx, row in top_queue.reset_index(drop=True).iterrows():
         table_body.append([
             f"#{idx + 1}",
             str(row["customer_id"]),
@@ -126,102 +239,39 @@ def build_prioritisation_view() -> html.Div:
         ])
 
     return html.Div(
+        dmc.Table(
+            id="prioritisation-queue-table",
+            data={"head": table_head, "body": table_body},
+            striped=True,
+            highlightOnHover=True,
+            withTableBorder=True,
+        ),
+        style={"overflowX": "auto"},
+    )
+
+
+def build_prioritisation_view() -> html.Div:
+    """Renders the 4-quadrant prioritisation matrix with full PowerBI-style cross-filtering."""
+    prioritised_df = state.prioritised_df if state.prioritised_df is not None else pd.DataFrame()
+
+    risk_thresh = state.risk_threshold
+    val_cutoff_pct = state.value_cutoff_pct
+    val_cutoff_amount = float(prioritised_df["total_spend"].quantile(val_cutoff_pct / 100.0)) if not prioritised_df.empty else 500.0
+
+    scatter_fig = build_scatter_matrix_figure(prioritised_df, risk_thresh, val_cutoff_amount)
+    quadrants_grid = build_prioritisation_quadrant_cards(prioritised_df)
+    queue_table = build_prioritisation_queue_table(prioritised_df)
+
+    return html.Div(
         children=[
+            # Cross-Filtering In-Memory State
+            dcc.Store(id="prio-filter-group-store", data=None),
+
             # 4 Quadrant Cards
-            dmc.SimpleGrid(
-                cols={"base": 1, "sm": 2, "md": 4},
-                spacing="md",
-                mb="lg",
-                children=[
-                    # Quadrant 1: VIP At-Risk
-                    dmc.Paper(
-                        p="md",
-                        radius="md",
-                        withBorder=True,
-                        shadow="xs",
-                        style={"borderLeft": "4px solid #EF4444"},
-                        children=[
-                            dmc.Group(
-                                justify="space-between",
-                                align="center",
-                                mb="xs",
-                                children=[
-                                    dmc.Text("VIP At-Risk", size="xs", fw=700, c="red"),
-                                    dmc.Badge("Urgency 1", color="red", variant="light", size="sm", radius="sm"),
-                                ],
-                            ),
-                            dmc.Title(f"{vip_at_risk['count']:,} customers", order=4),
-                            dmc.Text(f"${vip_at_risk['spend']:,.2f} revenue at risk", size="xs", c="dimmed", mt=2),
-                            dmc.Text(vip_at_risk["action"], size="xs", fw=500, mt=6),
-                        ],
-                    ),
-                    # Quadrant 2: Churning Base
-                    dmc.Paper(
-                        p="md",
-                        radius="md",
-                        withBorder=True,
-                        shadow="xs",
-                        style={"borderLeft": "4px solid #F97316"},
-                        children=[
-                            dmc.Group(
-                                justify="space-between",
-                                align="center",
-                                mb="xs",
-                                children=[
-                                    dmc.Text("Churning Base", size="xs", fw=700, c="orange"),
-                                    dmc.Badge("Urgency 2", color="orange", variant="light", size="sm", radius="sm"),
-                                ],
-                            ),
-                            dmc.Title(f"{churn_base['count']:,} customers", order=4),
-                            dmc.Text(f"${churn_base['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
-                            dmc.Text(churn_base["action"], size="xs", fw=500, mt=6),
-                        ],
-                    ),
-                    # Quadrant 3: VIP Loyals
-                    dmc.Paper(
-                        p="md",
-                        radius="md",
-                        withBorder=True,
-                        shadow="xs",
-                        style={"borderLeft": "4px solid #10B981"},
-                        children=[
-                            dmc.Group(
-                                justify="space-between",
-                                align="center",
-                                mb="xs",
-                                children=[
-                                    dmc.Text("VIP Loyals", size="xs", fw=700, c="teal"),
-                                    dmc.Badge("Urgency 3", color="teal", variant="light", size="sm", radius="sm"),
-                                ],
-                            ),
-                            dmc.Title(f"{vip_loyals['count']:,} customers", order=4),
-                            dmc.Text(f"${vip_loyals['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
-                            dmc.Text(vip_loyals["action"], size="xs", fw=500, mt=6),
-                        ],
-                    ),
-                    # Quadrant 4: Routine Shoppers
-                    dmc.Paper(
-                        p="md",
-                        radius="md",
-                        withBorder=True,
-                        shadow="xs",
-                        style={"borderLeft": "4px solid #94A3B8"},
-                        children=[
-                            dmc.Group(
-                                justify="space-between",
-                                align="center",
-                                mb="xs",
-                                children=[
-                                    dmc.Text("Routine Shoppers", size="xs", fw=700, c="dimmed"),
-                                    dmc.Badge("Urgency 4", color="gray", variant="light", size="sm", radius="sm"),
-                                ],
-                            ),
-                            dmc.Title(f"{routine['count']:,} customers", order=4),
-                            dmc.Text(f"${routine['spend']:,.2f} revenue", size="xs", c="dimmed", mt=2),
-                            dmc.Text(routine["action"], size="xs", fw=500, mt=6),
-                        ],
-                    ),
-                ],
+            html.Div(
+                id="prio-quadrants-container",
+                style={"marginBottom": "20px"},
+                children=quadrants_grid,
             ),
             # Threshold Configuration & Strategy Controls
             dmc.Paper(
@@ -305,8 +355,32 @@ def build_prioritisation_view() -> html.Div:
                 mb="lg",
                 style={"minWidth": 0, "overflow": "hidden"},
                 children=[
-                    dmc.Title("2x2 Risk vs. Value Scatter Matrix", order=4, mb="xs"),
-                    dmc.Text("Interactive distribution of individual customers with boundary crosshairs", size="xs", c="dimmed", mb="md"),
+                    dmc.Group(
+                        justify="space-between",
+                        align="center",
+                        mb="xs",
+                        children=[
+                            dmc.Group(
+                                gap="xs",
+                                children=[
+                                    dmc.Title("2x2 Risk vs. Value Scatter Matrix", order=4),
+                                    html.Div(id="prio-scatter-filter-badge"),
+                                ],
+                            ),
+                            dmc.Tooltip(
+                                label="Reset Scatter Filter",
+                                children=dmc.ActionIcon(
+                                    DashIconify(icon="tabler:rotate-2", width=16),
+                                    id="btn-reset-prio-scatter",
+                                    variant="light",
+                                    color="gray",
+                                    size="sm",
+                                    radius="md",
+                                ),
+                            ),
+                        ],
+                    ),
+                    dmc.Text("Touch / click any point or quadrant legend to cross-filter the contact queue below", size="xs", c="dimmed", mb="md"),
                     dcc.Graph(
                         id="prioritisation-scatter-chart",
                         figure=scatter_fig,
@@ -348,16 +422,11 @@ def build_prioritisation_view() -> html.Div:
                         ],
                     ),
                     html.Div(
-                        dmc.Table(
-                            id="prioritisation-queue-table",
-                            data={"head": table_head, "body": table_body},
-                            striped=True,
-                            highlightOnHover=True,
-                            withTableBorder=True,
-                        ),
-                        style={"overflowX": "auto"},
+                        id="prioritisation-queue-table-container",
+                        children=queue_table,
                     ),
                 ],
             ),
         ]
     )
+

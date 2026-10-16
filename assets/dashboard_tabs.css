@@ -189,3 +189,108 @@ button.modern-tab-btn[aria-selected="true"] .tab-icon,
   will-change: opacity, transform;
 }
 
+/* ==========================================================================
+   RetailIQ Dashboard - Dark Mode Plotly Typography & High-Contrast Styling
+   Fixes dull fonts inside plots during dark mode across all views
+   ========================================================================== */
+
+/* 1. Global High-Contrast Text for Plotly Charts in Dark Mode */
+[data-mantine-color-scheme="dark"] .js-plotly-plot text,
+[data-mantine-color-scheme="dark"] .dash-graph text,
+[data-mantine-color-scheme="dark"] svg.main-svg text {
+  fill: #F1F5F9 !important;
+  color: #F1F5F9 !important;
+}
+
+/* 2. Axis Tick Labels (Y-axis product names, X-axis values & dates) */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .xtick text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .ytick text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .x2tick text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .y2tick text,
+[data-mantine-color-scheme="dark"] .dash-graph .xtick text,
+[data-mantine-color-scheme="dark"] .dash-graph .ytick text,
+[data-mantine-color-scheme="dark"] .ytick text,
+[data-mantine-color-scheme="dark"] .xtick text {
+  fill: #E2E8F0 !important;
+  color: #E2E8F0 !important;
+  font-weight: 500 !important;
+}
+
+/* 3. Axis Titles (e.g. Revenue ($), Orders, Recency (Days)) */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .g-xtitle text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .g-ytitle text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .g-x2title text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .g-y2title text,
+[data-mantine-color-scheme="dark"] .dash-graph .g-xtitle text,
+[data-mantine-color-scheme="dark"] .dash-graph .g-ytitle text {
+  fill: #F8FAFC !important;
+  color: #F8FAFC !important;
+  font-weight: 600 !important;
+}
+
+/* 4. Dual-Axis Specialized Styling (Executive Trend: Revenue Blue & Orders Teal) */
+[data-mantine-color-scheme="dark"] #exec-trend-chart .ytick text,
+[data-mantine-color-scheme="dark"] #exec-trend-chart .g-ytitle text {
+  fill: #60A5FA !important;
+  color: #60A5FA !important;
+}
+
+[data-mantine-color-scheme="dark"] #exec-trend-chart .y2tick text,
+[data-mantine-color-scheme="dark"] #exec-trend-chart .g-y2title text {
+  fill: #2DD4BF !important;
+  color: #2DD4BF !important;
+}
+
+/* 5. Chart Titles and Headings */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .gtitle text,
+[data-mantine-color-scheme="dark"] .dash-graph .gtitle text {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+/* 6. Legend Text Labels */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .legendtext,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .legend text,
+[data-mantine-color-scheme="dark"] .dash-graph .legendtext {
+  fill: #E2E8F0 !important;
+  color: #E2E8F0 !important;
+}
+
+/* 7. Chart Annotations, Quadrant Labels & Empty States */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .annotation-text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .annotation text,
+[data-mantine-color-scheme="dark"] .dash-graph .annotation-text {
+  fill: #CBD5E1 !important;
+  color: #CBD5E1 !important;
+}
+
+/* 8. Donut / Pie Slice Text & In-Chart Labels */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .slicetext text,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .bartext text,
+[data-mantine-color-scheme="dark"] .dash-graph .slicetext text,
+[data-mantine-color-scheme="dark"] .dash-graph .bartext text {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+/* 9. Soft Subtle Grid Lines in Dark Mode */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .gridlayer path,
+[data-mantine-color-scheme="dark"] svg.main-svg .gridlayer path {
+  stroke: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-mantine-color-scheme="dark"] .js-plotly-plot .zerolinelayer path,
+[data-mantine-color-scheme="dark"] .js-plotly-plot .zerolinelayer line,
+[data-mantine-color-scheme="dark"] svg.main-svg .zerolinelayer path,
+[data-mantine-color-scheme="dark"] svg.main-svg .zerolinelayer line {
+  stroke: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* 10. High-Contrast Tooltip Text Legibility */
+[data-mantine-color-scheme="dark"] .js-plotly-plot .hoverlayer text {
+  fill: #FFFFFF !important;
+}
+
+

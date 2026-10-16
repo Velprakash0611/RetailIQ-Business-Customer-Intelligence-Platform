@@ -9,6 +9,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash import dcc, html
 
+from dash_iconify import DashIconify
+
 from retail_intelligence.dash_state import state
 from retail_intelligence.metrics import (
     compute_country_breakdown,
@@ -17,14 +19,28 @@ from retail_intelligence.metrics import (
 )
 
 
-def build_top_products_figure(sales_df: pd.DataFrame, top_n: int = 10, by: str = "revenue") -> go.Figure:
-    """Builds horizontal bar chart for top products."""
+def build_top_products_figure(
+    sales_df: pd.DataFrame,
+    top_n: int = 10,
+    by: str = "revenue",
+    selected_country: str | None = None,
+) -> go.Figure:
+    """Builds horizontal bar chart for top products, optionally filtered by country."""
     if sales_df is None or sales_df.empty:
         fig = go.Figure()
         fig.update_layout(template="plotly_white", height=320)
         return fig
 
-    top_df = compute_top_products(sales_df, top_n=top_n, by=by)
+    df_source = sales_df
+    if selected_country and not sales_df.empty:
+        df_source = sales_df[sales_df["country"] == selected_country]
+        if df_source.empty:
+            fig = go.Figure()
+            fig.add_annotation(text=f"No products found for {selected_country}", showarrow=False, font=dict(size=14, color="#64748B"))
+            fig.update_layout(template="plotly_white", height=320)
+            return fig
+
+    top_df = compute_top_products(df_source, top_n=top_n, by=by)
     if top_df.empty:
         fig = go.Figure()
         fig.update_layout(template="plotly_white", height=320)
@@ -48,20 +64,22 @@ def build_top_products_figure(sales_df: pd.DataFrame, top_n: int = 10, by: str =
         )
     )
 
+    title_suffix = f" — {selected_country}" if selected_country else ""
+
     fig.update_layout(
         template="plotly_white",
         height=320,
         margin=dict(l=150, r=30, t=10, b=35),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(title=title_text, showgrid=True, gridcolor="#E2E8F0"),
+        xaxis=dict(title=title_text + title_suffix, showgrid=True, gridcolor="#E2E8F0"),
         yaxis=dict(title="", tickfont=dict(size=11)),
     )
     return fig
 
 
-def build_country_figure(country_df: pd.DataFrame) -> go.Figure:
-    """Builds country share donut chart for top 6 countries plus others."""
+def build_country_figure(country_df: pd.DataFrame, selected_country: str | None = None) -> go.Figure:
+    """Builds country share donut chart with PowerBI-style slice explosion / highlighting."""
     if country_df is None or country_df.empty:
         fig = go.Figure()
         fig.update_layout(template="plotly_white", height=280)
@@ -76,16 +94,20 @@ def build_country_figure(country_df: pd.DataFrame) -> go.Figure:
             pd.DataFrame([{"country": "Other Countries", "revenue": other_rev}]),
         ], ignore_index=True)
 
+    # Pull out selected slice if clicked
+    pull_values = [0.12 if c == selected_country else 0 for c in top_countries["country"]]
+
     fig = go.Figure(
         data=[
             go.Pie(
                 labels=top_countries["country"],
                 values=top_countries["revenue"],
                 hole=0.55,
+                pull=pull_values,
                 marker=dict(colors=["#2563EB", "#0D9488", "#6366F1", "#F59E0B", "#EC4899", "#8B5CF6", "#94A3B8"]),
                 textinfo="label+percent",
                 insidetextorientation="radial",
-                hovertemplate="<b>%{label}</b><br>Revenue: $%{value:,.2f} (%{percent})<extra></extra>",
+                hovertemplate="<b>%{label}</b><br>Revenue: $%{value:,.2f} (%{percent})<br><i>Click to cross-filter page</i><extra></extra>",
             )
         ]
     )
@@ -96,21 +118,18 @@ def build_country_figure(country_df: pd.DataFrame) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
+        clickmode="event+select",
     )
     return fig
 
 
-def build_product_view() -> html.Div:
-    """Renders the product & geographic intelligence tab."""
-    sales_df = state.clean_sales_df if state.clean_sales_df is not None else pd.DataFrame()
-    returns_df = state.returns_df if state.returns_df is not None else pd.DataFrame()
+def build_declining_products_table(sales_df: pd.DataFrame, selected_country: str | None = None) -> html.Div:
+    """Builds declining demand table, optionally filtered by country."""
+    df_source = sales_df
+    if selected_country and not sales_df.empty:
+        df_source = sales_df[sales_df["country"] == selected_country]
 
-    top_fig = build_top_products_figure(sales_df, top_n=10, by="revenue")
-    declining_df = compute_declining_products(sales_df, min_orders=3, top_n=8)
-    country_df = compute_country_breakdown(sales_df)
-    country_fig = build_country_figure(country_df)
-
-    # Format Declining products table
+    declining_df = compute_declining_products(df_source, min_orders=2 if selected_country else 3, top_n=8)
     declining_head = ["Product ID", "Description", "Earlier Rev ($)", "Recent Rev ($)", "Change (%)"]
     declining_body = []
     for _, row in declining_df.iterrows():
@@ -122,7 +141,19 @@ def build_product_view() -> html.Div:
             f"{float(row['pct_change']):.1f}%",
         ])
 
-    # Format Country table
+    return html.Div(
+        dmc.Table(
+            data={"head": declining_head, "body": declining_body},
+            striped=True,
+            highlightOnHover=True,
+            withTableBorder=True,
+        ),
+        style={"overflowX": "auto"},
+    )
+
+
+def build_country_summary_table(country_df: pd.DataFrame, selected_country: str | None = None) -> html.Div:
+    """Builds country revenue share table."""
     country_head = ["Country", "Revenue ($)", "Orders", "Share (%)"]
     country_body = []
     for _, row in country_df.head(8).iterrows():
@@ -133,10 +164,26 @@ def build_product_view() -> html.Div:
             f"{float(row['pct_of_total_revenue']):.1f}%",
         ])
 
-    # Returns impact on products
+    return html.Div(
+        dmc.Table(
+            data={"head": country_head, "body": country_body},
+            striped=True,
+            highlightOnHover=True,
+            withTableBorder=True,
+        ),
+        style={"overflowX": "auto"},
+    )
+
+
+def build_product_returns_table(returns_df: pd.DataFrame, selected_country: str | None = None) -> html.Div:
+    """Builds product refund audit table, optionally filtered by country."""
+    ret_source = returns_df
+    if selected_country and not returns_df.empty and "country" in returns_df.columns:
+        ret_source = returns_df[returns_df["country"] == selected_country]
+
     returned_items_body = []
-    if not returns_df.empty:
-        ret_grp = returns_df.groupby(["product_id", "description"]).agg(
+    if not ret_source.empty:
+        ret_grp = ret_source.groupby(["product_id", "description"]).agg(
             returned_qty=("quantity", "sum"),
             returned_amount=("total_amount", "sum"),
         ).reset_index().sort_values(by="returned_amount", ascending=False).head(5)
@@ -151,7 +198,33 @@ def build_product_view() -> html.Div:
     ret_head = ["Product ID", "Description", "Units Returned", "Refund Value ($)"]
 
     return html.Div(
+        dmc.Table(
+            data={"head": ret_head, "body": returned_items_body},
+            striped=True,
+            highlightOnHover=True,
+            withTableBorder=True,
+        ),
+        style={"overflowX": "auto"},
+    )
+
+
+def build_product_view() -> html.Div:
+    """Renders the product & geographic intelligence tab with full PowerBI-style cross-filtering."""
+    sales_df = state.clean_sales_df if state.clean_sales_df is not None else pd.DataFrame()
+    returns_df = state.returns_df if state.returns_df is not None else pd.DataFrame()
+
+    top_fig = build_top_products_figure(sales_df, top_n=10, by="revenue")
+    country_df = compute_country_breakdown(sales_df)
+    country_fig = build_country_figure(country_df)
+    declining_table = build_declining_products_table(sales_df)
+    country_table = build_country_summary_table(country_df)
+    returns_table = build_product_returns_table(returns_df)
+
+    return html.Div(
         children=[
+            # Cross-Filtering In-Memory State
+            dcc.Store(id="product-filter-country-store", data=None),
+
             # Top SKUs Section
             dmc.Paper(
                 p="lg",
@@ -165,19 +238,41 @@ def build_product_view() -> html.Div:
                         align="center",
                         mb="md",
                         children=[
-                            html.Div([
-                                dmc.Title("Top Performing SKUs", order=4),
-                                dmc.Text("Volume and revenue distribution across best-selling catalog items", size="xs", c="dimmed"),
-                            ]),
-                            dmc.SegmentedControl(
-                                id="product-sort-metric",
-                                value="revenue",
-                                data=[
-                                    {"label": "Rank by Revenue", "value": "revenue"},
-                                    {"label": "Rank by Quantity", "value": "quantity"},
+                            dmc.Group(
+                                gap="xs",
+                                children=[
+                                    html.Div([
+                                        dmc.Title("Top Performing SKUs", order=4),
+                                        dmc.Text("Volume and revenue distribution across best-selling catalog items", size="xs", c="dimmed"),
+                                    ]),
+                                    html.Div(id="product-top-filter-badge"),
                                 ],
-                                size="sm",
-                                radius="md",
+                            ),
+                            dmc.Group(
+                                gap="sm",
+                                children=[
+                                    dmc.SegmentedControl(
+                                        id="product-sort-metric",
+                                        value="revenue",
+                                        data=[
+                                            {"label": "Rank by Revenue", "value": "revenue"},
+                                            {"label": "Rank by Quantity", "value": "quantity"},
+                                        ],
+                                        size="sm",
+                                        radius="md",
+                                    ),
+                                    dmc.Tooltip(
+                                        label="Reset Product View",
+                                        children=dmc.ActionIcon(
+                                            DashIconify(icon="tabler:rotate-2", width=16),
+                                            id="btn-reset-product-top",
+                                            variant="light",
+                                            color="gray",
+                                            size="sm",
+                                            radius="md",
+                                        ),
+                                    ),
+                                ],
                             ),
                         ],
                     ),
@@ -216,13 +311,8 @@ def build_product_view() -> html.Div:
                             ),
                             dmc.Text("Products with highest revenue drop between early and recent halves", size="xs", c="dimmed", mb="md"),
                             html.Div(
-                                dmc.Table(
-                                    data={"head": declining_head, "body": declining_body},
-                                    striped=True,
-                                    highlightOnHover=True,
-                                    withTableBorder=True,
-                                ),
-                                style={"overflowX": "auto"},
+                                id="product-declining-table-container",
+                                children=declining_table,
                             ),
                         ],
                     ),
@@ -234,8 +324,32 @@ def build_product_view() -> html.Div:
                         shadow="xs",
                         style={"minWidth": 0, "overflow": "hidden"},
                         children=[
-                            dmc.Title("Geographic Revenue Distribution", order=4, mb="xs"),
-                            dmc.Text("Global market contribution and top regional buying centers", size="xs", c="dimmed", mb="sm"),
+                            dmc.Group(
+                                justify="space-between",
+                                align="center",
+                                mb="xs",
+                                children=[
+                                    dmc.Group(
+                                        gap="xs",
+                                        children=[
+                                            dmc.Title("Geographic Revenue Distribution", order=4),
+                                            html.Div(id="product-country-filter-badge"),
+                                        ],
+                                    ),
+                                    dmc.Tooltip(
+                                        label="Reset Country Filter",
+                                        children=dmc.ActionIcon(
+                                            DashIconify(icon="tabler:rotate-2", width=16),
+                                            id="btn-reset-product-country",
+                                            variant="light",
+                                            color="gray",
+                                            size="sm",
+                                            radius="md",
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            dmc.Text("Touch / click any country slice to cross-filter products and alerts", size="xs", c="dimmed", mb="sm"),
                             dcc.Graph(
                                 id="product-country-chart",
                                 figure=country_fig,
@@ -244,13 +358,8 @@ def build_product_view() -> html.Div:
                                 style={"height": "280px", "width": "100%", "minWidth": 0},
                             ),
                             html.Div(
-                                dmc.Table(
-                                    data={"head": country_head, "body": country_body},
-                                    striped=True,
-                                    highlightOnHover=True,
-                                    withTableBorder=True,
-                                ),
-                                style={"overflowX": "auto"},
+                                id="product-country-table-container",
+                                children=country_table,
                             ),
                         ],
                     ),
@@ -274,13 +383,8 @@ def build_product_view() -> html.Div:
                     ),
                     dmc.Text("Items generating the highest refund claims and returned quantities", size="xs", c="dimmed", mb="md"),
                     html.Div(
-                        dmc.Table(
-                            data={"head": ret_head, "body": returned_items_body},
-                            striped=True,
-                            highlightOnHover=True,
-                            withTableBorder=True,
-                        ),
-                        style={"overflowX": "auto"},
+                        id="product-return-table-container",
+                        children=returns_table,
                     ),
                 ],
             ),

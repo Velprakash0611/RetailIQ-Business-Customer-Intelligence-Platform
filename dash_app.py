@@ -18,16 +18,42 @@ import pandas as pd
 from dash import Dash, Input, Output, State, ctx, dcc, html
 from dash_iconify import DashIconify
 
+from retail_intelligence.customer_features import compute_customer_features
 from retail_intelligence.dash_state import state
 from retail_intelligence.dash_ui.header import build_header
-from retail_intelligence.dash_ui.view_customer import build_customer_view
-from retail_intelligence.dash_ui.view_executive import build_executive_view, build_sales_trend_figure
+from retail_intelligence.dash_ui.view_customer import (
+    build_customer_kpi_cards,
+    build_customer_view,
+    build_recency_hist_figure,
+    build_rfm_persona_figure,
+    build_rfm_persona_table,
+)
+from retail_intelligence.dash_ui.view_executive import (
+    build_dow_figure,
+    build_executive_kpi_cards,
+    build_executive_top_products_table,
+    build_executive_view,
+    build_sales_trend_figure,
+)
 from retail_intelligence.dash_ui.view_landing import build_landing_dataset_status, build_landing_view
 from retail_intelligence.dash_ui.view_prediction import build_prediction_view
-from retail_intelligence.dash_ui.view_prioritisation import build_prioritisation_view
-from retail_intelligence.dash_ui.view_product import build_product_view, build_top_products_figure
+from retail_intelligence.dash_ui.view_prioritisation import (
+    build_prioritisation_quadrant_cards,
+    build_prioritisation_queue_table,
+    build_prioritisation_view,
+    build_scatter_matrix_figure,
+)
+from retail_intelligence.dash_ui.view_product import (
+    build_country_figure,
+    build_declining_products_table,
+    build_product_returns_table,
+    build_product_view,
+    build_top_products_figure,
+)
 from retail_intelligence.dash_ui.view_report import build_report_view
+from retail_intelligence.metrics import compute_country_breakdown
 from retail_intelligence.reporting import build_audit_report, export_report_markdown
+from retail_intelligence.segmentation import assign_rfm_segments, compute_segment_summary
 from retail_intelligence.schema_mapping import (
     CANONICAL_REQUIRED_FIELDS,
     FIELD_LABELS,
@@ -192,7 +218,7 @@ app.layout = dmc.MantineProvider(
                                                     className="modern-tabs-list",
                                                     children=[
                                                         dmc.TabsTab(
-                                                            "Executive Overview & Data Quality",
+                                                            "Executive Overview",
                                                             value="tab-executive",
                                                             leftSection=DashIconify(icon="tabler:dashboard", width=18, className="tab-icon", color="#3B82F6"),
                                                             className="modern-tab-btn",
@@ -532,27 +558,239 @@ def handle_landing_upload(contents: str, filename: str, current_trigger: int):
 
 
 # ---------------------------------------------------------------------------
-# Downstream Analytics & Control Callbacks
+# PowerBI-Style Cross-Filtering & Downstream Analytical Callbacks
 # ---------------------------------------------------------------------------
 
+# 1. Executive Overview Cross-Filtering (Day-of-Week click & reset)
 @app.callback(
-    Output("exec-trend-chart", "figure"),
-    Input("exec-trend-interval", "value"),
+    Output("exec-filter-dow-store", "data"),
+    Input("exec-dow-chart", "clickData"),
+    Input("btn-reset-exec-dow", "n_clicks"),
+    State("exec-filter-dow-store", "data"),
     prevent_initial_call=True,
 )
-def handle_trend_interval(freq: str):
-    """Updates executive sales trend chart on frequency interval switch."""
-    return build_sales_trend_figure(state.clean_sales_df, freq=freq or "W")
+def handle_exec_dow_click(click_data, reset_clicks, current_filter):
+    """Toggles or clears day-of-week cross filter."""
+    if ctx.triggered_id == "btn-reset-exec-dow":
+        return None
+    if click_data and "points" in click_data:
+        day = click_data["points"][0].get("x")
+        if day == current_filter:
+            return None  # Toggle off on second click
+        return day
+    return None
+
+
+@app.callback(
+    Output("exec-kpis-container", "children"),
+    Output("exec-trend-chart", "figure"),
+    Output("exec-dow-chart", "figure"),
+    Output("exec-top-table-container", "children"),
+    Output("exec-dow-filter-badge", "children"),
+    Output("btn-reset-exec-dow", "color"),
+    Output("btn-reset-exec-dow", "variant"),
+    Input("exec-filter-dow-store", "data"),
+    Input("exec-trend-interval", "value"),
+    Input("btn-reset-exec-trend", "n_clicks"),
+    prevent_initial_call=True,
+)
+def update_executive_view(selected_dow, freq, _reset_trend_clicks):
+    """Re-renders executive KPIs, trend chart, and top products based on cross-filtered day."""
+    effective_freq = "W" if ctx.triggered_id == "btn-reset-exec-trend" else (freq or "W")
+    sales_df = state.clean_sales_df if state.clean_sales_df is not None else pd.DataFrame()
+    returns_df = state.returns_df if state.returns_df is not None else pd.DataFrame()
+
+    kpis = build_executive_kpi_cards(sales_df, returns_df, selected_dow=selected_dow)
+    trend_fig = build_sales_trend_figure(sales_df, freq=effective_freq, selected_dow=selected_dow)
+    dow_fig = build_dow_figure(sales_df, selected_dow=selected_dow)
+    top_table = build_executive_top_products_table(sales_df, selected_dow=selected_dow)
+
+    if selected_dow:
+        badge = dmc.Badge(f"Filtered: {selected_dow}", color="indigo", variant="light", radius="sm")
+        reset_color = "indigo"
+        reset_variant = "filled"
+    else:
+        badge = html.Div()
+        reset_color = "gray"
+        reset_variant = "light"
+
+    return kpis, trend_fig, dow_fig, top_table, badge, reset_color, reset_variant
+
+
+# 2. Product & Geography Cross-Filtering (Country click & reset)
+@app.callback(
+    Output("product-filter-country-store", "data"),
+    Input("product-country-chart", "clickData"),
+    Input("btn-reset-product-country", "n_clicks"),
+    State("product-filter-country-store", "data"),
+    prevent_initial_call=True,
+)
+def handle_product_country_click(click_data, reset_clicks, current_filter):
+    """Toggles or clears country cross filter."""
+    if ctx.triggered_id == "btn-reset-product-country":
+        return None
+    if click_data and "points" in click_data:
+        country = click_data["points"][0].get("label")
+        if country == "Other Countries":
+            return None
+        if country == current_filter:
+            return None  # Toggle off on second click
+        return country
+    return None
 
 
 @app.callback(
     Output("product-top-chart", "figure"),
+    Output("product-country-chart", "figure"),
+    Output("product-declining-table-container", "children"),
+    Output("product-return-table-container", "children"),
+    Output("product-country-filter-badge", "children"),
+    Output("btn-reset-product-country", "color"),
+    Output("btn-reset-product-country", "variant"),
+    Input("product-filter-country-store", "data"),
     Input("product-sort-metric", "value"),
+    Input("btn-reset-product-top", "n_clicks"),
     prevent_initial_call=True,
 )
-def handle_product_sort(sort_metric: str):
-    """Updates product ranking chart on metric switch."""
-    return build_top_products_figure(state.clean_sales_df, top_n=10, by=sort_metric or "revenue")
+def update_product_view(selected_country, sort_metric, _reset_top_clicks):
+    """Re-renders product rankings, country donut, declining products, and returns based on country."""
+    effective_sort = "revenue" if ctx.triggered_id == "btn-reset-product-top" else (sort_metric or "revenue")
+    sales_df = state.clean_sales_df if state.clean_sales_df is not None else pd.DataFrame()
+    returns_df = state.returns_df if state.returns_df is not None else pd.DataFrame()
+
+    top_fig = build_top_products_figure(sales_df, top_n=10, by=effective_sort, selected_country=selected_country)
+    country_df = compute_country_breakdown(sales_df)
+    country_fig = build_country_figure(country_df, selected_country=selected_country)
+    declining_table = build_declining_products_table(sales_df, selected_country=selected_country)
+    returns_table = build_product_returns_table(returns_df, selected_country=selected_country)
+
+    if selected_country:
+        badge = dmc.Badge(f"Country: {selected_country}", color="violet", variant="light", radius="sm")
+        reset_color = "violet"
+        reset_variant = "filled"
+    else:
+        badge = html.Div()
+        reset_color = "gray"
+        reset_variant = "light"
+
+    return top_fig, country_fig, declining_table, returns_table, badge, reset_color, reset_variant
+
+
+# 3. Customer Intelligence Cross-Filtering (RFM Persona click & reset)
+@app.callback(
+    Output("cust-filter-persona-store", "data"),
+    Input("cust-persona-chart", "clickData"),
+    Input("btn-reset-cust-persona", "n_clicks"),
+    State("cust-filter-persona-store", "data"),
+    prevent_initial_call=True,
+)
+def handle_cust_persona_click(click_data, reset_clicks, current_filter):
+    """Toggles or clears RFM persona cross filter."""
+    if ctx.triggered_id == "btn-reset-cust-persona":
+        return None
+    if click_data and "points" in click_data:
+        persona = click_data["points"][0].get("y")
+        if persona == current_filter:
+            return None  # Toggle off on second click
+        return persona
+    return None
+
+
+@app.callback(
+    Output("cust-kpis-container", "children"),
+    Output("cust-persona-chart", "figure"),
+    Output("cust-recency-chart", "figure"),
+    Output("cust-table-container", "children"),
+    Output("cust-persona-filter-badge", "children"),
+    Output("btn-reset-cust-persona", "color"),
+    Output("btn-reset-cust-persona", "variant"),
+    Input("cust-filter-persona-store", "data"),
+    Input("btn-reset-cust-recency", "n_clicks"),
+    prevent_initial_call=True,
+)
+def update_customer_view(selected_persona, _reset_rec_clicks):
+    """Re-renders customer KPIs, persona chart, recency histogram, and scorecard table based on persona."""
+    sales_df = state.clean_sales_df if state.clean_sales_df is not None else pd.DataFrame()
+    returns_df = state.returns_df if state.returns_df is not None else pd.DataFrame()
+
+    features_df = compute_customer_features(sales_df, returns_df=returns_df)
+    segmented_df = assign_rfm_segments(features_df)
+    summary_df = compute_segment_summary(segmented_df)
+
+    kpis = build_customer_kpi_cards(segmented_df, selected_persona=selected_persona)
+    persona_fig = build_rfm_persona_figure(summary_df, selected_persona=selected_persona)
+    recency_fig = build_recency_hist_figure(segmented_df, selected_persona=selected_persona)
+    seg_table = build_rfm_persona_table(summary_df, selected_persona=selected_persona)
+
+    if selected_persona:
+        badge = dmc.Badge(f"Persona: {selected_persona}", color="pink", variant="light", radius="sm")
+        reset_color = "pink"
+        reset_variant = "filled"
+    else:
+        badge = html.Div()
+        reset_color = "gray"
+        reset_variant = "light"
+
+    return kpis, persona_fig, recency_fig, seg_table, badge, reset_color, reset_variant
+
+
+# 4. Prioritisation Queue Cross-Filtering (Quadrant click & reset)
+@app.callback(
+    Output("prio-filter-group-store", "data"),
+    Input("prioritisation-scatter-chart", "clickData"),
+    Input("btn-reset-prio-scatter", "n_clicks"),
+    State("prio-filter-group-store", "data"),
+    prevent_initial_call=True,
+)
+def handle_prio_scatter_click(click_data, reset_clicks, current_filter):
+    """Toggles or clears prioritisation quadrant cross filter."""
+    if ctx.triggered_id == "btn-reset-prio-scatter":
+        return None
+    if click_data and "points" in click_data:
+        pt = click_data["points"][0]
+        group = pt.get("data", {}).get("name")
+        if not group and "customdata" in pt and state.prioritised_df is not None:
+            cid = pt["customdata"][0]
+            match = state.prioritised_df[state.prioritised_df["customer_id"] == cid]
+            if not match.empty:
+                group = match["priority_group"].iloc[0]
+        if group == current_filter:
+            return None  # Toggle off on second click
+        return group
+    return None
+
+
+@app.callback(
+    Output("prioritisation-scatter-chart", "figure"),
+    Output("prio-quadrants-container", "children"),
+    Output("prioritisation-queue-table-container", "children"),
+    Output("prio-scatter-filter-badge", "children"),
+    Output("btn-reset-prio-scatter", "color"),
+    Output("btn-reset-prio-scatter", "variant"),
+    Input("prio-filter-group-store", "data"),
+    prevent_initial_call=True,
+)
+def update_prioritisation_view(selected_group):
+    """Re-renders prioritisation scatter chart, quadrant summary cards, and contact table based on quadrant."""
+    prioritised_df = state.prioritised_df if state.prioritised_df is not None else pd.DataFrame()
+    risk_thresh = state.risk_threshold
+    val_cutoff_pct = state.value_cutoff_pct
+    val_cutoff_amount = float(prioritised_df["total_spend"].quantile(val_cutoff_pct / 100.0)) if not prioritised_df.empty else 500.0
+
+    scatter_fig = build_scatter_matrix_figure(prioritised_df, risk_thresh, val_cutoff_amount, selected_group=selected_group)
+    quadrants_grid = build_prioritisation_quadrant_cards(prioritised_df, selected_group=selected_group)
+    queue_table = build_prioritisation_queue_table(prioritised_df, selected_group=selected_group)
+
+    if selected_group:
+        badge = dmc.Badge(f"Quadrant: {selected_group}", color="teal", variant="light", radius="sm")
+        reset_color = "teal"
+        reset_variant = "filled"
+    else:
+        badge = html.Div()
+        reset_color = "gray"
+        reset_variant = "light"
+
+    return scatter_fig, quadrants_grid, queue_table, badge, reset_color, reset_variant
 
 
 @app.callback(

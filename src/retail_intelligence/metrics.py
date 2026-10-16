@@ -33,15 +33,21 @@ def compute_executive_kpis(
         }
 
     gross_revenue = float(sales_df["total_amount"].sum())
-    returns_revenue = float(returns_df["total_amount"].sum()) if not returns_df.empty else 0.0
+    has_returns = returns_df is not None and not returns_df.empty
+    returns_revenue = float(returns_df["total_amount"].sum()) if has_returns else 0.0
     net_revenue = gross_revenue - returns_revenue
 
     total_orders = int(sales_df["invoice_id"].nunique())
     # Count only registered unique customers for customer KPI
-    reg_sales = sales_df[~sales_df["is_guest"]]
-    registered_customers = int(reg_sales["customer_id"].nunique())
-    guest_orders = int(sales_df[sales_df["is_guest"]]["invoice_id"].nunique())
-    total_customers = registered_customers + (1 if guest_orders > 0 else 0)
+    if "is_guest" in sales_df.columns:
+        reg_sales = sales_df[~sales_df["is_guest"]]
+        registered_customers = int(reg_sales["customer_id"].nunique())
+        guest_orders = int(sales_df[sales_df["is_guest"]]["invoice_id"].nunique())
+        total_customers = registered_customers + (1 if guest_orders > 0 else 0)
+    else:
+        registered_customers = int(sales_df["customer_id"].nunique()) if "customer_id" in sales_df.columns else 0
+        guest_orders = 0
+        total_customers = registered_customers
 
     # Order-level grouping for AOV and units per order
     order_summary = sales_df.groupby("invoice_id").agg(
@@ -52,8 +58,9 @@ def compute_executive_kpis(
     units_per_order = float(order_summary["order_units"].mean()) if not order_summary.empty else 0.0
 
     # Return rate
-    total_tx_count = len(sales_df) + len(returns_df)
-    return_rate_count = (len(returns_df) / total_tx_count * 100.0) if total_tx_count > 0 else 0.0
+    returns_count = len(returns_df) if returns_df is not None else 0
+    total_tx_count = len(sales_df) + returns_count
+    return_rate_count = (returns_count / total_tx_count * 100.0) if total_tx_count > 0 else 0.0
     return_rate_rev = (returns_revenue / gross_revenue * 100.0) if gross_revenue > 0 else 0.0
 
     return {

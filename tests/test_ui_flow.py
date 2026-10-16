@@ -205,4 +205,91 @@ def test_all_views_render_valid_components():
     assert rep_view is not None
 
 
+def test_tab_name_is_executive_overview():
+    """Verifies that the executive tab is labeled cleanly as 'Executive Overview'."""
+    from dash_app import app
+    import dash_mantine_components as dmc
+
+    tabs_component = None
+    for comp in app.layout._traverse():
+        if getattr(comp, "id", None) == "main-tabs":
+            tabs_component = comp
+            break
+
+    tabs_list = [c for c in tabs_component.children if isinstance(c, dmc.TabsList)][0]
+    exec_tab = [t for t in tabs_list.children if getattr(t, "value", None) == "tab-executive"][0]
+    assert exec_tab.children == "Executive Overview"
+
+
+def test_executive_cross_filtering_helpers():
+    """Verifies DOW cross-filtering highlights the selected day and filters datasets."""
+    import pandas as pd
+    from retail_intelligence.dash_ui.view_executive import (
+        build_dow_figure,
+        build_sales_trend_figure,
+        build_executive_kpi_cards,
+    )
+
+    data = {
+        "invoice_id": ["1", "2", "3", "4"],
+        "stock_code": ["A", "B", "C", "D"],
+        "description": ["Item A", "Item B", "Item C", "Item D"],
+        "quantity": [10, 5, 2, 8],
+        "price": [10.0, 20.0, 15.0, 5.0],
+        "date": pd.to_datetime(["2023-01-02", "2023-01-03", "2023-01-06", "2023-01-06"]),  # Monday, Tuesday, Friday, Friday
+        "customer_id": [101, 102, 103, 104],
+        "country": ["United Kingdom", "France", "Germany", "United Kingdom"],
+    }
+    df = pd.DataFrame(data)
+    df["total_amount"] = df["quantity"] * df["price"]
+
+    # Filtered by Friday
+    dow_fig = build_dow_figure(df, selected_dow="Friday")
+    assert dow_fig is not None
+    # Highlight color for Friday, dimmed for Monday
+    colors = dow_fig.data[0].marker.color
+    assert any("#2563EB" in c for c in colors)
+    assert any("rgba" in c for c in colors)
+
+    # Trend figure with selected dow
+    trend_fig = build_sales_trend_figure(df, freq="W", selected_dow="Friday")
+    assert trend_fig is not None
+
+    # KPI cards with selected dow
+    kpis = build_executive_kpi_cards(df, None, selected_dow="Friday")
+    assert kpis is not None
+
+
+def test_product_cross_filtering_helpers():
+    """Verifies Country cross-filtering pulls out the slice and filters rankings."""
+    import pandas as pd
+    from retail_intelligence.dash_ui.view_product import (
+        build_country_figure,
+        build_top_products_figure,
+    )
+    from retail_intelligence.metrics import compute_country_breakdown
+
+    df = pd.DataFrame({
+        "invoice_id": ["1", "2"],
+        "product_id": ["A", "B"],
+        "description": ["Item A", "Item B"],
+        "quantity": [10, 5],
+        "price": [10.0, 20.0],
+        "date": pd.to_datetime(["2023-01-02", "2023-01-03"]),
+        "customer_id": [101, 102],
+        "country": ["United Kingdom", "France"],
+    })
+    df["total_amount"] = df["quantity"] * df["price"]
+
+    country_df = compute_country_breakdown(df)
+    fig = build_country_figure(country_df, selected_country="France")
+    # Verify France pull slice
+    assert fig.data[0].pull is not None
+    assert any(p > 0 for p in fig.data[0].pull)
+
+    top_fig = build_top_products_figure(df, top_n=5, by="revenue", selected_country="France")
+    assert top_fig is not None
+
+
+
 
